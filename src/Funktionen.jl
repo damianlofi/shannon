@@ -177,13 +177,20 @@ function random_graph(n::Int, m::Int; weighted=false)::GameGraph
         push!(Zshkomponente, Vertex(i))
     end
     j=n
+    #maximale Kantenzahl eines einfachen Graphen mit n Knoten -- das Spiel
+    #wird laut Aufgabenstellung auf einfachen Graphen gespielt, also ohne
+    #Parallelkanten
+    max_edges = n*(n-1) ÷ 2
+    m = min(m, max_edges)
     while length(edges)<m
         u=rand(Zshkomponente)
         Zshkomponente2=copy(Zshkomponente)
         filter!(!=(u),Zshkomponente2)
         v=rand(Zshkomponente2)
-        push!(edges, Edge(j, u, v, 0.0, :neutral))
-        j+=1
+        if !any(e -> (e.u==u && e.v==v) || (e.u==v && e.v==u), edges)
+            push!(edges, Edge(j, u, v, 0.0, :neutral))
+            j+=1
+        end
     end
 
     #gewichteter fall
