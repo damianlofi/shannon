@@ -148,6 +148,34 @@ function example_diamond()::GameGraph
     return GameGraph([s, a, b, t], edges, s, t)
 end
 
+"""
+    example_bridge()
+
+Ein einfacher Pfad `s`-`m`-`t` mit nur zwei Kanten. Ein klassisches
+Cut-Spiel: egal welche Kante Short zuerst beansprucht, Cut entfernt die
+andere und gewinnt.
+"""
+function example_bridge()::GameGraph
+    s = Vertex(1)
+    m = Vertex(2)
+    t = Vertex(3)
+    edges = [Edge(1, s, m, 0.0, :neutral), Edge(2, m, t, 0.0, :neutral)]
+    return GameGraph([s, m, t], edges, s, t)
+end
+
+"""
+    example_cycle(n=6)
+
+Ein Kreis mit `n` Knoten, `s` und `t` liegen sich gegenüber. Da es zwei
+kantendisjunkte `s`-`t`-Wege gibt, ist dies ein klassisches Short-Spiel.
+"""
+function example_cycle(n::Int=6)::GameGraph
+    n >= 3 || throw(ArgumentError("Ein Kreis benötigt mindestens 3 Knoten."))
+    vertices = [Vertex(i) for i in 1:n]
+    edges = [Edge(i, vertices[i], vertices[i == n ? 1 : i + 1], 0.0, :neutral) for i in 1:n]
+    return GameGraph(vertices, edges, vertices[1], vertices[n ÷ 2 + 1])
+end
+
 function status_text(state::GameState)::String
     if state.winner !== nothing
         winner = state.winner == :short ? "Short" : "Cut"
@@ -169,20 +197,34 @@ function play_gui(g::GameGraph=random_graph(6, 8))
     template = Ref(g)
     state = new_game(clone_graph(template[]))
 
-    win = GtkWindow("Shannon-Switching-Spiel", 600, 480)
+    win = GtkWindow("Shannon-Switching-Spiel", 600, 520)
     vbox = GtkBox(:v)
 
-    toolbar = GtkBox(:h)
+    # Zeile 1: Graph erzeugen/laden
+    row1 = GtkBox(:h)
+    cb_weighted = GtkCheckButton("gewichtet")
+    spn_n = GtkSpinButton(2:40)
+    set_gtk_property!(spn_n, "value", 6)
+    spn_m = GtkSpinButton(1:200)
+    set_gtk_property!(spn_m, "value", 8)
     btn_random = GtkButton("Neues zufälliges Spiel")
     btn_restart = GtkButton("Neues Spiel (gleicher Graph)")
-    btn_diamond = GtkButton("Beispiel aus Abb. 1 laden")
-    cb_weighted = GtkCheckButton("gewichtet")
+    for w in (cb_weighted, GtkLabel("n:"), spn_n, GtkLabel("m:"), spn_m, btn_random, btn_restart)
+        push!(row1, w)
+    end
+    push!(vbox, row1)
+
+    # Zeile 2: Beispielgraphen und Computerstrategien
+    row2 = GtkBox(:h)
+    btn_diamond = GtkButton("Beispiel: Diamant (Abb. 1)")
+    btn_bridge = GtkButton("Beispiel: Brücke")
+    btn_cycle = GtkButton("Beispiel: Kreis")
     btn_short_ki = GtkButton("Short (KI) zieht")
     btn_cut_ki = GtkButton("Cut (KI) zieht")
-    for w in (cb_weighted, btn_random, btn_restart, btn_diamond, btn_short_ki, btn_cut_ki)
-        push!(toolbar, w)
+    for w in (btn_diamond, btn_bridge, btn_cycle, btn_short_ki, btn_cut_ki)
+        push!(row2, w)
     end
-    push!(vbox, toolbar)
+    push!(vbox, row2)
 
     statuslabel = GtkLabel(status_text(state))
     push!(vbox, statuslabel)
@@ -192,6 +234,8 @@ function play_gui(g::GameGraph=random_graph(6, 8))
     push!(vbox, cnvs)
     push!(win, vbox)
 
+    hover = Ref{Union{Edge,Nothing}}(nothing)
+
     function refresh!()
         Gtk4.label(statuslabel, status_text(state))
         Gtk4.draw(widget(cnvs))
@@ -200,6 +244,7 @@ function play_gui(g::GameGraph=random_graph(6, 8))
     function load_graph!(newgraph::GameGraph)
         template[] = newgraph
         state = new_game(clone_graph(newgraph))
+        hover[] = nothing
         refresh!()
     end
 
@@ -221,10 +266,13 @@ function play_gui(g::GameGraph=random_graph(6, 8))
         for e in state.graph.edges
             x1, y1 = pos[e.u.id]
             x2, y2 = pos[e.v.id]
+
             color = if e.state == :short
                 colorant"royalblue"
             elseif e.state == :cut
                 colorant"firebrick"
+            elseif e === hover[] && state.winner === nothing
+                colorant"green"
             else
                 colorant"gray40"
             end
@@ -252,6 +300,16 @@ function play_gui(g::GameGraph=random_graph(6, 8))
         end
     end
 
+    on(cnvs.mouse.motion) do btn
+        pos = layout_positions(state.graph)
+        x, y = Float64(btn.position.x), Float64(btn.position.y)
+        e = edge_at_position(state.graph, pos, x, y)
+        if e !== hover[]
+            hover[] = e
+            Gtk4.draw(widget(cnvs))
+        end
+    end
+
     on(cnvs.mouse.buttonpress) do btn
         btn.button == 1 || return
         state.winner === nothing || return
@@ -266,16 +324,27 @@ function play_gui(g::GameGraph=random_graph(6, 8))
 
     signal_connect(btn_random, "clicked") do _
         weighted = get_gtk_property(cb_weighted, "active", Bool)
-        load_graph!(random_graph(6, 8; weighted=weighted))
+        n = get_gtk_property(spn_n, "value", Int)
+        m = get_gtk_property(spn_m, "value", Int)
+        load_graph!(random_graph(n, m; weighted=weighted))
     end
 
     signal_connect(btn_restart, "clicked") do _
         state = new_game(clone_graph(template[]))
+        hover[] = nothing
         refresh!()
     end
 
     signal_connect(btn_diamond, "clicked") do _
         load_graph!(example_diamond())
+    end
+
+    signal_connect(btn_bridge, "clicked") do _
+        load_graph!(example_bridge())
+    end
+
+    signal_connect(btn_cycle, "clicked") do _
+        load_graph!(example_cycle(6))
     end
 
     function ki_move!(strategy, playersym, name)
