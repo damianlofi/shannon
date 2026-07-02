@@ -68,12 +68,14 @@ end
 #Vergleichsfunktionen für unsere Structs
 
 #Vertex vergleichen
+#Laufzeit: O(1)
 function Base.:(==)(v1::Vertex, v2::Vertex)::Bool
     #println("vertex verglichen")
     return v1.id==v2.id
 end
 
 #Edges vergleichen
+#Laufzeit: O(1)
 function Base.:(==)(e1::Edge, e2::Edge)::Bool
     #println("edges verglichen")
     return(e1.id==e2.id &&
@@ -85,6 +87,7 @@ function Base.:(==)(e1::Edge, e2::Edge)::Bool
 end
 
 #GameGraph vergleichen
+#Laufzeit: O(n+m) mit n=|vertices|, m=|edges| (elementweiser Vektorvergleich)
 function Base.:(==)(g1::GameGraph, g2::GameGraph)::Bool
     #println("graph verglichen")
     return(g1.vertices==g2.vertices &&
@@ -94,6 +97,8 @@ function Base.:(==)(g1::GameGraph, g2::GameGraph)::Bool
 end
 
 #GameState vergleichen
+#Laufzeit: O(n+m+h) mit n=|vertices|, m=|edges|, h=|history| (dominiert von
+#GameGraph-Vergleich und dem elementweisen Vergleich der history)
 function Base.:(==)(g1::GameState, g2::GameState)::Bool
     #println("state verglichen")
     return(g1.graph==g2.graph &&

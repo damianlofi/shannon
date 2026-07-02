@@ -8,6 +8,7 @@ julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 
 GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
 ````
 """
+#Laufzeit: O(1)
 function new_game(g::GameGraph)::GameState
     return(GameState(g, :short, Vector{Tuple{Symbol, Edge}}(), nothing))
 end
@@ -24,6 +25,7 @@ julia> valid_moves(state)
  Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)
 ````
 """
+#Laufzeit: O(m) mit m=|state.graph.edges| (einmaliges Durchlaufen aller Kanten)
 function valid_moves(state::GameState)::Vector{Edge}
     neutraledges=Vector{Edge}()
     for edge in state.graph.edges
@@ -47,6 +49,8 @@ julia> state
 GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :short)], Vertex(1), Vertex(2)), :cut, Tuple{Symbol, Edge}[(:short, Edge(1, Vertex(1), Vertex(2), 0.0, :short))], :short)
 ````
 """
+#Laufzeit: O(n+m) mit n=|Knoten|, m=|Kanten| -- dominiert vom Aufruf von
+#check_winner (valid_moves allein ist O(m))
 function make_move!(state::GameState, e::Edge)::Nothing
     #=for edge in state.graph.edges
         if e==edge
@@ -84,6 +88,8 @@ julia> check_winner(state)
 :short
 ````
 """
+#Laufzeit: O(n+m) mit n=|Knoten|, m=|Kanten| -- zwei Breitensuchen
+#(je einmal höchstens alle Knoten/Kanten besucht)
 function check_winner(state::GameState)::Union{Symbol, Nothing}
     #hat short gewonnen?
     beansprucht=Vector{Edge}()
@@ -163,6 +169,11 @@ Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral), Edge(2, Vertex(3), Vertex(2),
 Vertex(1), Vertex(3))
 ````
 """
+#Laufzeit: O(n) für das Spannbaum-Grundgerüst, danach bis zu m-(n-1) weitere
+#Kanten, deren Duplikatsprüfung jeweils O(m) kostet -- damit im schlechtesten
+#Fall O(n+m²). Für m nahe der Maximalkantenzahl n(n-1)/2 kann die
+#Zufallssuche nach einem noch freien Knotenpaar zusätzlich mehrere Versuche
+#brauchen, bleibt aber für die in diesem Projekt üblichen Graphgrößen unkritisch.
 function random_graph(n::Int, m::Int; weighted=false)::GameGraph
     #Knoten bauen
     vertices=Vector{Vertex}()

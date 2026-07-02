@@ -12,6 +12,9 @@ julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 
 GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
 ````
 """
+#Laufzeit: O(n+m) für die Tiefensuche nach einem s-t-Weg; im Fall ohne
+#gefundenen Weg zusätzlich O(m log m) für die Sortierung der Kantengewichte
+#(m=|Kanten|, n=|Knoten|)
 function weighted_short(state::GameState)::Edge
     gamegraph=state.graph
     G1=Vector{Edge}() #alle neutralen und short kanten
@@ -82,6 +85,8 @@ julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 
 GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
 ````
 """
+#Laufzeit: O(n+m) für die Breitensuche ab t; der Fallback (günstigste
+#neutrale Kante) kostet zusätzlich O(m) (m=|Kanten|, n=|Knoten|)
 function weighted_cut(state::GameState)::Edge
     gamegraph=state.graph
     G1=Vector{Edge}() #alle neutralen und short kanten

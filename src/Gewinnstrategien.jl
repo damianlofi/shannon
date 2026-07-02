@@ -10,6 +10,8 @@ julia> short_strategy(state)
 Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)
 ````
 """
+#Laufzeit: O(n+m) mit n=|Knoten|, m=|Kanten| -- mehrere Tiefen-/Breitensuchen
+#(A_t, B_t, C_s/C_t), von denen jede höchstens alle Knoten/Kanten einmal besucht
 function short_strategy(state::GameState)::Edge
     gamegraph=state.graph
     G1=Vector{Edge}() #alle neutralen und short kanten
@@ -210,6 +212,10 @@ julia> cut_strategy(state)
 Edge(2, Vertex(2), Vertex(3), 0.0, :neutral)
 ````
 """
+#Laufzeit: aktuell nicht sinnvoll angebbar, da die Funktion unvollständig
+#implementiert ist (kein return, verwendet ein undefiniertes A_t_edge) --
+#konzeptionell (Anhang B) wäre analog zu short_strategy O(n+m) pro
+#Baumkonstruktion zu erwarten, plus die Kosten von MaximallyDistantTrees
 function cut_strategy(state::GameState)::Edge
     gamegraph=state.graph
     G1=Vector{Edge}() #alle neutralen und short kanten
@@ -266,14 +272,27 @@ end
 #Algorithm 3 Maximal distante Spannb¨aume (Kishi-Kajitani)
 
 """
-    MaximallyDistantTrees
+    MaximallyDistantTrees(G1, T1, T2)
 
-Die Funktion startet das Spiel, indem sie aus einen Graphen den neutralen 1. Spielstand macht
+Macht die beiden Spannbäume `T1`,`T2` von `G1` schrittweise maximal distant
+(Algorithmus 3, Kishi-Kajitani, siehe Anhang A der Aufgabenstellung): Für
+jede gemeinsame Sehne (eine Kante in keinem der beiden Bäume) wird versucht,
+mittels `Augment` den Abstand `d(T1,T2)=|T1\\T2|` der Bäume zu erhöhen, bis
+keine Verbesserung mehr möglich ist. Sind `G1` zwei kantendisjunkte
+Spannbäume möglich, liefert die Funktion sie.
+
 # Beispiel
 ````julia
-julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)))
-GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
+julia> e1 = Edge(1, Vertex(1), Vertex(2), 0.0, :neutral);
+julia> e2 = Edge(2, Vertex(1), Vertex(2), 0.0, :neutral);
+julia> MaximallyDistantTrees([e1, e2], [e1], [e2])
+(Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Edge[Edge(2, Vertex(1), Vertex(2), 0.0, :neutral)])
 ````
+
+#Laufzeit: nicht abschließend zu beziffern, da diese Funktion auf dem
+#derzeit unvollständigen `Augment`/`_FC` aufbaut (siehe dort); konzeptionell
+#ist jede Augmentierung höchstens O(m) teuer (m=|G1|) und wird höchstens
+#O(m) mal wiederholt, also insgesamt O(m²).
 """
 function MaximallyDistantTrees(G1::Vector{Edge}, T1::Vector{Edge}, T2::Vector{Edge})::Tuple{Vector{Edge},Vector{Edge}}
     changed=true
@@ -294,14 +313,28 @@ end
 #Algorithm 4 Augmentierung entlang einer gemeinsamen Sehne
 
 """
-    Augment
+    Augment(T1, T2, edge)
 
-Die Funktion startet das Spiel, indem sie aus einen Graphen den neutralen 1. Spielstand macht
+Versucht, die beiden Spannbäume `T1`,`T2` entlang der gemeinsamen Sehne
+`edge` einen Schritt distanter zu machen (Algorithmus 4, siehe Anhang A):
+Es werden schichtweise Fundamentalkreise (`_FC`) ausgehend von `edge`
+verfolgt, bis eine Kette gefunden wird, entlang derer `T1`/`T2` getauscht
+werden können. Gibt zurück, ob eine solche Verbesserung gefunden und
+angewendet wurde.
+
 # Beispiel
 ````julia
-julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)))
-GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
+julia> T1 = [Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)];
+julia> T2 = [Edge(2, Vertex(1), Vertex(2), 0.0, :neutral)];
+julia> Augment(T1, T2, Edge(3, Vertex(1), Vertex(2), 0.0, :neutral))
+false
 ````
+
+#Laufzeit: konzeptionell O(m) pro Aufruf (m=|T1∪T2|), da jede Kante
+#höchstens einmal in eine Schicht aufgenommen wird -- die aktuelle
+#Implementierung ist jedoch unvollständig (u.a. verwendet sie `par` wie ein
+#Dict, obwohl es als leerer Vektor initialisiert wird) und terminiert daher
+#nicht zuverlässig.
 """
 function Augment(T1::Vector{Edge}, T2::Vector{Edge}, edge::Edge)::Bool
     par=[]
@@ -343,14 +376,25 @@ function Augment(T1::Vector{Edge}, T2::Vector{Edge}, edge::Edge)::Bool
 end
 
 """
-    _FC
+    _FC(start, T1)
 
-Die Funktion startet das Spiel, indem sie aus einen Graphen den neutralen 1. Spielstand macht
+Der Fundamentalkreis FC(`start`,`T1`) der Sehne `start` bezüglich des
+Spannbaums `T1` (siehe Anhang A): die Kantenmenge aus `start` selbst und dem
+eindeutigen Baumpfad zwischen ihren beiden Endpunkten in `T1`.
+
 # Beispiel
 ````julia
-julia> new_game(GameGraph([Vertex(1), Vertex(2)], [Edge(1,Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)))
-GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
+julia> T1 = [Edge(1, Vertex(1), Vertex(2), 0.0, :neutral), Edge(2, Vertex(2), Vertex(3), 0.0, :neutral)];
+julia> _FC(Edge(3, Vertex(1), Vertex(3), 0.0, :neutral), T1)
+3-element Vector{Edge}:
+ Edge(2, Vertex(2), Vertex(3), 0.0, :neutral)
+ Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)
+ Edge(3, Vertex(1), Vertex(3), 0.0, :neutral)
 ````
+
+#Laufzeit: konzeptionell O(n+m) für die Pfadsuche in T1 (n=|Knoten|,
+#m=|T1|) -- die aktuelle Implementierung ist jedoch unvollständig (die
+#`while`-Bedingung fehlt, siehe `#to be done`) und daher nicht lauffähig.
 """
 function _FC(start::Edge, T1:: Vector{Edge})::Vector{Edge}
     output=[start]

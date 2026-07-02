@@ -10,6 +10,7 @@ Graphics = "a2bd30eb-e257-5431-a919-1863eab51364"
 Gtk4 = "9db2cae5-386f-4011-9d63-a5602296539b"
 GtkObservables = "8710efd8-4ad6-11eb-33ea-2d5ceb25a41c"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Cairo = "1.1.1"
@@ -18,3 +19,4 @@ Graphics = "1.1.3"
 Gtk4 = "0.7.12"
 GtkObservables = "2.2.2"
 Printf = "1.11.0"
+Test = "1.11.0"
