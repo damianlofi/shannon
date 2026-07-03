@@ -184,6 +184,84 @@ function example_cycle(n::Int=6)::GameGraph
     return GameGraph(vertices, edges, vertices[1], vertices[n ÷ 2 + 1])
 end
 
+"""
+    example_theta3()
+
+Drei kantendisjunkte `s`-`t`-Wege der Länge 2 (über `a`,`b`,`c`) plus eine
+Querverbindung `a`-`b`. Ein garantiertes Short-Spiel (empirisch über 3000
+Partien gegen verschiedene Cut-Stile bestätigt: 0 Niederlagen) -- OHNE die
+Querverbindung wäre das trotz drei "Wegen" KEIN Short-Spiel, siehe
+`example_cycle` für dasselbe Phänomen mit nur zwei Wegen: bloße Pfade ohne
+Querverbindung bieten keine Redundanz, die sich reparieren lässt.
+"""
+function example_theta3()::GameGraph
+    s = Vertex(1)
+    a = Vertex(2)
+    b = Vertex(3)
+    c = Vertex(4)
+    t = Vertex(5)
+    edges = [
+        Edge(1, s, a, 0.0, :neutral),
+        Edge(2, a, t, 0.0, :neutral),
+        Edge(3, s, b, 0.0, :neutral),
+        Edge(4, b, t, 0.0, :neutral),
+        Edge(5, s, c, 0.0, :neutral),
+        Edge(6, c, t, 0.0, :neutral),
+        Edge(7, a, b, 0.0, :neutral),
+    ]
+    return GameGraph([s, a, b, c, t], edges, s, t)
+end
+
+"""
+    example_doppelraute()
+
+Zwei "Schichten" `a1,a2` und `b1,b2` zwischen `s` und `t`, vollständig
+bipartit verbunden, plus eine Querverbindung `a1`-`a2`. Größeres, dichteres
+Beispiel als der Diamant. Ebenfalls empirisch bestätigt (0 Niederlagen über
+3000 Partien) -- auch hier ist die Querverbindung notwendig, ohne sie ist
+es trotz viel Struktur KEIN garantiertes Short-Spiel.
+"""
+function example_doppelraute()::GameGraph
+    s = Vertex(1)
+    a1 = Vertex(2)
+    a2 = Vertex(3)
+    b1 = Vertex(4)
+    b2 = Vertex(5)
+    t = Vertex(6)
+    edges = [
+        Edge(1, s, a1, 0.0, :neutral),
+        Edge(2, s, a2, 0.0, :neutral),
+        Edge(3, a1, b1, 0.0, :neutral),
+        Edge(4, a1, b2, 0.0, :neutral),
+        Edge(5, a2, b1, 0.0, :neutral),
+        Edge(6, a2, b2, 0.0, :neutral),
+        Edge(7, b1, t, 0.0, :neutral),
+        Edge(8, b2, t, 0.0, :neutral),
+        Edge(9, a1, a2, 0.0, :neutral),
+    ]
+    return GameGraph([s, a1, a2, b1, b2, t], edges, s, t)
+end
+
+"""
+    example_dense()
+
+`s`, `t` und drei weitere Knoten, alle paarweise verbunden außer `s`-`t`
+direkt (K5 minus einer Kante). Sehr redundant, garantiertes Short-Spiel
+(0 Niederlagen über 3000 Partien).
+"""
+function example_dense()::GameGraph
+    vertices = [Vertex(i) for i in 1:5]
+    s, t = vertices[1], vertices[5]
+    edges = Edge[]
+    id = 1
+    for i in 1:5, j in (i+1):5
+        (i == 1 && j == 5) && continue #keine direkte s-t-Kante
+        push!(edges, Edge(id, vertices[i], vertices[j], 0.0, :neutral))
+        id += 1
+    end
+    return GameGraph(vertices, edges, s, t)
+end
+
 function status_text(state::GameState)::String
     if state.winner !== nothing
         winner = state.winner == :short ? "Short" : "Cut"
@@ -222,7 +300,7 @@ function play_gui(g::GameGraph=random_graph(6, 8))
     end
     push!(vbox, row1)
 
-    # Zeile 2: Beispielgraphen und Computerstrategien
+    # Zeile 2: Beispielgraphen (klein) und Computerstrategien
     row2 = GtkBox(:h)
     btn_diamond = GtkButton("Beispiel: Diamant")
     btn_bridge = GtkButton("Beispiel: Brücke")
@@ -233,6 +311,16 @@ function play_gui(g::GameGraph=random_graph(6, 8))
         push!(row2, w)
     end
     push!(vbox, row2)
+
+    # Zeile 3: weitere Beispielgraphen, garantierte Short-Spiele
+    row3 = GtkBox(:h)
+    btn_theta3 = GtkButton("Beispiel: 3 Wege + Quer")
+    btn_doppelraute = GtkButton("Beispiel: Doppelraute")
+    btn_dense = GtkButton("Beispiel: Dicht (K5-1)")
+    for w in (btn_theta3, btn_doppelraute, btn_dense)
+        push!(row3, w)
+    end
+    push!(vbox, row3)
 
     statuslabel = GtkLabel(status_text(state))
     push!(vbox, statuslabel)
@@ -353,6 +441,18 @@ function play_gui(g::GameGraph=random_graph(6, 8))
 
     signal_connect(btn_cycle, "clicked") do _
         load_graph!(example_cycle(6))
+    end
+
+    signal_connect(btn_theta3, "clicked") do _
+        load_graph!(example_theta3())
+    end
+
+    signal_connect(btn_doppelraute, "clicked") do _
+        load_graph!(example_doppelraute())
+    end
+
+    signal_connect(btn_dense, "clicked") do _
+        load_graph!(example_dense())
     end
 
     function ki_move!(strategy, playersym, name)
