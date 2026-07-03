@@ -1,18 +1,25 @@
 #Optimale Strategien für das klassische Spiel
 """
-    short_strategy
+    short_strategy_old
+
+Ursprüngliche Implementierung (siehe `short_strategy` weiter unten für die
+korrigierte, aktuell verwendete Version). Bleibt unverändert
+erhalten -- diese Version hatte zwei bekannte Probleme: einen `!=(x)`-Tippfehler
+(Julias Curry-Syntax statt Negation) in einigen Zweigen, und eine A_t/B_t-
+Konstruktion über zwei unabhängige Tiefensuchen, die keine echt maximal
+distanten Bäume garantiert (siehe `short_strategy`-Docstring für Details).
 
 Die Funktion gibt den besten Zug zu einem gegebenen Spielzustand aus, welchen Short ausführen kann
 # Beispiel
 ````julia
 julia> state=GameState(GameGraph(Vertex[Vertex(1), Vertex(2)], Edge[Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)], Vertex(1), Vertex(2)), :short, Tuple{Symbol, Edge}[], nothing)
-julia> short_strategy(state)
+julia> short_strategy_old(state)
 Edge(1, Vertex(1), Vertex(2), 0.0, :neutral)
 ````
 """
 #Laufzeit: O(n+m) mit n=|Knoten|, m=|Kanten| -- mehrere Tiefen-/Breitensuchen
 #(A_t, B_t, C_s/C_t), von denen jede höchstens alle Knoten/Kanten einmal besucht
-function short_strategy(state::GameState)::Edge
+function short_strategy_old(state::GameState)::Edge
     gamegraph=state.graph
     G1=Vector{Edge}() #alle neutralen und short kanten
     for edge in state.graph.edges

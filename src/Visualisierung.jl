@@ -166,8 +166,16 @@ end
 """
     example_cycle(n=6)
 
-Ein Kreis mit `n` Knoten, `s` und `t` liegen sich gegenüber. Da es zwei
-kantendisjunkte `s`-`t`-Wege gibt, ist dies ein klassisches Short-Spiel.
+Ein Kreis mit `n` Knoten, `s` und `t` liegen sich gegenüber. Enthält zwar
+zwei kantendisjunkte `s`-`t`-Wege, ist aber trotzdem KEIN garantiertes
+Short-Spiel: die beiden Wege haben keinerlei Redundanz (bloße Pfade, keine
+Bäume), daher kann Cut mit einem einzigen Zug (Entfernen einer beliebigen
+Kante) den Kreis so aufbrechen, dass nur noch ein einziger `s`-`t`-Weg ohne
+Ersatzkante übrig bleibt. Rechnerisch: der Graph mit verschmolzenem `s`,`t`
+hat 5 Knoten (braucht 2·4=8 Kanten für zwei disjunkte Spannbäume), besitzt
+aber nur 6 Kanten -- ein Short-Spiel im Sinne von Lehmans Kriterium ist
+damit unmöglich. Trotzdem als eigenständiges Beispiel nützlich (kleiner,
+sparsamer Graph zum Testen der Spiellogik).
 """
 function example_cycle(n::Int=6)::GameGraph
     n >= 3 || throw(ArgumentError("Ein Kreis benötigt mindestens 3 Knoten."))
@@ -216,7 +224,7 @@ function play_gui(g::GameGraph=random_graph(6, 8))
 
     # Zeile 2: Beispielgraphen und Computerstrategien
     row2 = GtkBox(:h)
-    btn_diamond = GtkButton("Beispiel: Diamant (Abb. 1)")
+    btn_diamond = GtkButton("Beispiel: Diamant")
     btn_bridge = GtkButton("Beispiel: Brücke")
     btn_cycle = GtkButton("Beispiel: Kreis")
     btn_short_ki = GtkButton("Short (KI) zieht")
